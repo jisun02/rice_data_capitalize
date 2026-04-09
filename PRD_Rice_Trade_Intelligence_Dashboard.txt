@@ -1,0 +1,92 @@
+PRD: 쌀 무역 인텔리전스 대시보드 (Rice Trade Intelligence Dashboard)
+1. 프로젝트 개요 (Project Overview)
+
+목적: 글로벌 쌀 무역 팀이 매일 수신하는 공급업체의 쌀 오퍼(가격, 포장, 조건)와 해상 운임(Freight)을 기록하고, 이를 인터랙티브 차트로 시각화하여 시장 트렌드를 파악하는 내부 웹 애플리케이션 구축.
+
+사용 언어: 사이트의 모든 UI, 버튼, 데이터 테이블 헤더 등은 한국어로 구현.
+
+핵심 워크플로우:
+1. 정해진 드롭다운 옵션을 통해 시장 가격 및 운임 데이터를 일관되게 입력.
+2. 저장된 데이터를 필터링하고 시계열 그래프로 조회.
+
+2. 기술 스택 (Tech Stack)
+
+언어: Python 3.10+
+
+프론트엔드 및 프레임워크: Streamlit (streamlit)
+
+데이터 처리: Pandas (pandas)
+
+데이터베이스: SQLite (sqlite3) (2개의 별도 테이블로 데이터 분리 저장)
+
+데이터 시각화: Plotly (plotly.express)
+
+3. 데이터베이스 스키마 (Database Schema)
+AI는 SQLite를 사용하여 아래 2개의 테이블을 생성해야 합니다.
+
+테이블 1: market_offers (쌀 오퍼 정보)
+
+id: Integer (Primary Key, Auto-increment)
+offer_date: Date (오퍼 접수일)
+valid_from: Date (오퍼 유효 시작일)
+valid_to: Date (오퍼 유효 종료일)
+trader_name: Text (담당자/트레이더 이름)
+origin: Text (원산지, 예: 태국, 베트남, 인도, 파키스탄, 미국 등)
+rice_type: Text (쌀 품종, 예: 백미 5%, 자스민, 파보일드 등)
+packaging: Text (포장 형태, 예: 50kg PP백, 1MT 점보백, 벌크 등)
+incoterm: Text (수출 조건, 예: FOB, EXW, FAS 등)
+fob_price: Float (MT당 FOB 가격)
+conditions: Text (선적 기간 등 기타 메모)
+
+테이블 2: freight_offers (운임 정보)
+
+id: Integer (Primary Key, Auto-increment)
+offer_date: Date (운임 오퍼 접수일)
+valid_from: Date (운임 유효 시작일)
+valid_to: Date (운임 유효 종료일)
+trader_name: Text (담당자/트레이더 이름)
+origin_port: Text (출발항, 예: 방콕, 호치민, 칸들라 등)
+destination_port: Text (도착항)
+shipping_line: Text (선사 이름, 예: Maersk, MSC, CMA CGM 등)
+freight_cost: Float (컨테이너/MT당 운임)
+conditions: Text (환적 여부, Free time 등 기타 메모)
+
+4. 핵심 기능 및 요구사항 (Core Features)
+
+기능 1: 데이터 입력 폼 (Data Entry Forms)
+
+Streamlit의 st.form을 사용하여 쌀 오퍼(market_offers)와 운임(freight_offers)을 입력하는 두 개의 분리된 폼 생성.
+
+드롭다운 필수 적용: 데이터의 일관성을 위해 날짜(st.date_input), 가격/운임(st.number_input), 기타 조건 메모(st.text_area)를 제외한 모든 텍스트 항목(담당자, 원산지, 품종, 포장, 인코텀즈, 항구, 선사 등)은 사용자가 직접 타이핑하지 않고 st.selectbox를 통한 드롭다운으로 선택하게 할 것. (사전에 리스트 변수로 옵션들을 정의할 것).
+
+데이터 입력 시 SQLite 데이터베이스에 즉시 INSERT 쿼리가 실행되며, 완료 후 성공(Success) 메시지 출력.
+
+기능 2: 인터랙티브 대시보드 (Interactive Dashboard)
+
+SQLite 데이터베이스에서 두 테이블의 데이터를 읽어와 Pandas DataFrame으로 변환.
+
+필터링: 화면 상단에 st.multiselect 및 st.date_input을 배치하여 사용자가 원하는 데이터를 걸러낼 수 있게 함.
+
+공통 필터: 오퍼 접수일, 유효 기간(Valid Date)
+
+쌀 필터: 원산지, 쌀 품종, 포장 형태
+
+운임 필터: 출발항, 도착항, 선사
+
+시각화 (차트): Plotly를 사용하여 시간에 따른 가격(fob_price) 및 운임(freight_cost)의 추이를 보여주는 시계열 꺾은선 그래프(Line Chart) 구현. 선택된 드롭다운 조건(예: 여러 원산지 선택 시)에 따라 그래프의 선이 다른 색상으로 구분되어 나타나야 함.
+
+로우 데이터 테이블: 필터링된 원본 데이터 프레임을 화면 하단에 st.dataframe으로 출력하여 세부적인 conditions 및 valid_to 만료일 등을 표 형태로 열람할 수 있게 제공.
+
+5. UI/UX 레이아웃 지시사항 (UI/UX Instructions for AI)
+
+사이트 전체에 와이드 레이아웃 적용: st.set_page_config(layout="wide")
+
+Streamlit 탭(st.tabs)을 사용하여 애플리케이션을 깔끔하게 3개의 섹션으로 나눌 것:
+
+탭 1: 대시보드 (Dashboard) (필터, 쌀/운임 그래프, 데이터 테이블 표시)
+탭 2: 쌀 오퍼 등록 (Market Offers Entry) (쌀 가격 입력 폼)
+탭 3: 해상 운임 등록 (Freight Offers Entry) (선사 운임 입력 폼)
+
+데이터베이스 연결은 안전하게 관리하며 가급적 Streamlit의 @st.cache_resource를 활용하여 커넥션을 맺을 것.
+
+코드의 변수명은 영어로 하되, 화면에 출력되는 모든 라벨, 탭 이름, 버튼, 설명 문구는 **한국어(Korean)**로 작성할 것.
