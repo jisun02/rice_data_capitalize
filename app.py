@@ -6,10 +6,17 @@ from streamlit_gsheets import GSheetsConnection
 from datetime import datetime, timedelta
 
 # 페이지 기본 설정
-st.set_page_config(page_title="쌀 무역 인텔리전스 (자동화 버전)", layout="wide")
+st.set_page_config(page_title="쌀 무역 인텔리전스", layout="wide")
 
-# --- 구글 시트 연결 ---
-conn = st.connection("gsheets", type=GSheetsConnection)
+# --- 이 부분을 아래 코드로 교체하세요 ---
+if "connections" in st.secrets and "gsheets" in st.secrets.connections:
+    # Secrets에 설정된 정보를 명시적으로 전달하여 연결
+    conn = st.connection("gsheets", type=GSheetsConnection)
+else:
+    st.error("Streamlit Secrets 설정이 누락되었습니다. Settings > Secrets를 확인해주세요.")
+    # Secrets가 로드되지 않았을 때 어떤 값이 들어있는지 디버깅용으로 출력해볼 수 있습니다.
+    # st.write("현재 내 Secrets 키 목록:", st.secrets.keys()) 
+    st.stop()
 
 def load_data(worksheet_name):
     try:
