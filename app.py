@@ -10,18 +10,22 @@ st.set_page_config(page_title="쌀 무역 인텔리전스", layout="wide")
 
 # --- 구글 시트 연결 (최종 정리 버전) ---
 try:
-    # Secrets에서 값을 직접 읽어옴
-    gs_info = st.secrets["connections"]["gsheets"]
-    
-    conn = st.connection(
-        "gsheets", 
-        type=GSheetsConnection, 
-        spreadsheet=gs_info["spreadsheet"],
-        service_account=gs_info["service_account"] # 명시적으로 전달
-    )
+    # Secrets에서 gsheets 섹션이 있는지 확인
+    if "connections" in st.secrets and "gsheets" in st.secrets.connections:
+        # 인증 정보를 직접 주입하되, 에러를 일으키는 spreadsheet 인자는 제거합니다.
+        conn = st.connection(
+            "gsheets", 
+            type=GSheetsConnection, 
+            service_account=st.secrets["connections"]["gsheets"]["service_account"]
+        )
+    else:
+        # Secrets 형식이 다를 경우를 대비한 기본 연결
+        conn = st.connection("gsheets", type=GSheetsConnection)
 except Exception as e:
     st.error(f"연결 설정 오류: {e}")
     st.stop()
+
+# --------------------------------------------------
 
 def load_data(worksheet_name):
     try:
