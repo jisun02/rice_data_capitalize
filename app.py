@@ -10,29 +10,18 @@ st.set_page_config(page_title="쌀 무역 인텔리전스", layout="wide")
 
 # --- 구글 시트 연결 (최종 정리 버전) ---
 try:
-    # 1. Secrets 데이터 가져오기
-    gsheets_config = st.secrets.get("connections", {}).get("gsheets", {})
-    spreadsheet_url = gsheets_config.get("spreadsheet")
-    service_account_info = gsheets_config.get("service_account")
-
-    if not spreadsheet_url or not service_account_info:
-        st.error("Secrets 설정(spreadsheet 또는 service_account)이 누락되었습니다.")
-        st.stop()
-
-    # 2. 연결 시도 (서비스 계정 정보 직접 주입)
+    # Secrets에서 값을 직접 읽어옴
+    gs_info = st.secrets["connections"]["gsheets"]
+    
     conn = st.connection(
         "gsheets", 
         type=GSheetsConnection, 
-        spreadsheet=spreadsheet_url,
-        **{"service_account": service_account_info} 
+        spreadsheet=gs_info["spreadsheet"],
+        service_account=gs_info["service_account"] # 명시적으로 전달
     )
 except Exception as e:
-    # 위 방식이 실패할 경우 마지막으로 기본 연결 시도
-    try:
-        conn = st.connection("gsheets", type=GSheetsConnection)
-    except Exception as final_e:
-        st.error(f"구글 시트 연결에 최종 실패했습니다: {final_e}")
-        st.stop()
+    st.error(f"연결 설정 오류: {e}")
+    st.stop()
 
 def load_data(worksheet_name):
     try:
@@ -41,7 +30,7 @@ def load_data(worksheet_name):
     except Exception:
         # 데이터가 아예 없는 초기 상태라면 빈 데이터프레임을 반환합니다.
         return pd.DataFrame()
-        
+
 # --- 드롭다운 옵션 데이터 정의 ---
 TRADER_OPTIONS = ["지선", "민지", "현우", "기타"]
 SUPPLIER_OPTIONS = ["Olam", "Phoenix", "Wilmar", "Louis Dreyfus", "기타"] # 자주 쓰는 공급선 목록
