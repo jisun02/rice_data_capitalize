@@ -6,10 +6,26 @@ from streamlit_gsheets import GSheetsConnection
 from datetime import datetime, timedelta
 
 # 페이지 기본 설정
-st.set_page_config(page_title="쌀 무역 인텔리전스 (자동화 버전)", layout="wide")
+st.set_page_config(page_title="쌀 무역 인텔리전스", layout="wide")
 
-# --- 구글 시트 연결 ---
-conn = st.connection("gsheets", type=GSheetsConnection)
+try:
+    # 1. Secrets에서 인증 정보 직접 가져오기
+    # Secrets 탭에 service_account라고 저장했는지, json_key라고 했는지 확인 후 맞춰주세요.
+    # 여기서는 가장 권장되는 'service_account' 기준입니다.
+    creds_dict = st.secrets["connections"]["gsheets"]["service_account"]
+    spreadsheet_url = st.secrets["connections"]["gsheets"]["spreadsheet"]
+    
+    # 2. 연결 객체 생성 시 인증 정보 직접 전달
+    conn = st.connection(
+        "gsheets", 
+        type=GSheetsConnection, 
+        spreadsheet=spreadsheet_url,
+        service_account=creds_dict  # 이 부분이 핵심: 키를 직접 찔러 넣어줌
+    )
+except Exception as e:
+    st.error(f"연결 설정 오류: {e}")
+    st.info("Streamlit Secrets에 service_account 설정이 올바른지 확인하세요.")
+    st.stop()
 
 def load_data(worksheet_name):
     try:
