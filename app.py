@@ -136,34 +136,53 @@ with tab_market_entry:
 with tab_freight_entry:
     st.subheader("신규 해상 운임 입력")
     
-    # 수정사항 3: 원산지에 따른 항구 필터링을 위해 폼 밖에서 원산지 먼저 선택
+    # 원산지에 따른 항구 필터링 (기존 로직 유지)
     selected_origin_for_port = st.selectbox("원산지 선택 (항구 필터링용)", ORIGIN_OPTIONS, key="origin_port_filter")
     available_origin_ports = PORT_MAPPING.get(selected_origin_for_port, ["기타"])
 
+    # 시간 기본값 설정
+    now_f = datetime.now()
+    
     with st.form("freight_form"):
-        f_col1, f_col2 = st.columns(2)
-        with f_col1:
-            f_offer_date = st.date_input("접수일", value=datetime.now())
-            # 수정사항 3: 선택된 원산지에 맞는 출발항만 보여줌
+        col1, col2 = st.columns(2)
+        with col1:
+            f_offer_date = st.date_input("운임 접수일", value=now_f)
+            f_valid_from = st.datetime_input("유효 시작일시", value=now_f, key="f_valid_from")
             origin_port = st.selectbox("출발항 (Origin Port)", available_origin_ports)
-        with f_col2:
-            f_trader = st.selectbox("담당자", TRADER_OPTIONS, key="f_trader_sel")
+            f_line = st.selectbox("선사 (Shipping Line)", SHIPPING_OPTIONS)
+            
+        with col2:
+            f_trader = st.selectbox("담당자(내부)", TRADER_OPTIONS, key="f_trader_sel")
+            f_valid_to = st.datetime_input("유효 종료일시", value=now_f + timedelta(days=7), key="f_valid_to") # 보통 운임은 일주일 단위가 많아 7일로 설정
             destination_port = st.selectbox("도착항 (Destination Port)", DESTINATION_PORT_OPTIONS)
+            f_cost = st.number_input("운임 비용 (USD/MT)", min_value=0.0, step=1.0)
+
+        f_conditions = st.text_area("운임 조건 및 메모 (Surcharge, Free time 등)", key="f_cond")
         
-        f_line = st.selectbox("선사", SHIPPING_OPTIONS)
-        f_cost = st.number_input("운임 비용 (USD)", min_value=0.0, step=5.0)
-        f_save = st.form_submit_button("운임 정보 저장")
+        f_save = st.form_submit_button("💾 운임 정보 저장")
         
         if f_save:
+            # 기존 데이터 불러오기
             f_df = load_data("freight")
+            
+            # 새 데이터 생성
             f_new = pd.DataFrame([{
                 "offer_date": f_offer_date.isoformat(),
+                "valid_from": f_valid_from.isoformat(),
+                "valid_to": f_valid_to.isoformat(),
                 "trader_name": f_trader,
                 "origin_port": origin_port,
                 "destination_port": destination_port,
                 "shipping_line": f_line,
-                "freight_cost": f_cost
+                "freight_cost": f_cost,
+                "conditions": f_conditions
             }])
-            conn.update(worksheet="freight", data=pd.concat([f_df, f_new], ignore_index=True))
-            st.success("운임 정보가 저장되었습니다.")
-            st.rerun()
+            
+            # 데이터 합치기 및 업로드
+            try:
+                combined_f_df = pd.concat([f_df, f_new], ignore_index=True)
+                conn.update(worksheet="freight", data=combined_f_df)
+                st.success("해상 운임 정보가 성공적으로 저장되었습니다!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"저장 중 오류가 발생했습니다: {e}")
