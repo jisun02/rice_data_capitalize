@@ -8,10 +8,9 @@ from datetime import datetime, timedelta
 # 페이지 기본 설정
 st.set_page_config(page_title="쌀 무역 인텔리전스", layout="wide")
 
-# --- 구글 시트 연결 (최종 수정 버전) ---
+# --- 구글 시트 연결 (최종 정리 버전) ---
 try:
-    # 1. Secrets에서 인증 정보와 시트 주소 가져오기
-    # .get()을 사용하여 데이터가 없을 경우를 대비합니다.
+    # 1. Secrets 데이터 가져오기
     gsheets_config = st.secrets.get("connections", {}).get("gsheets", {})
     spreadsheet_url = gsheets_config.get("spreadsheet")
     service_account_info = gsheets_config.get("service_account")
@@ -20,19 +19,19 @@ try:
         st.error("Secrets 설정(spreadsheet 또는 service_account)이 누락되었습니다.")
         st.stop()
 
-    # 2. 연결 객체 생성 (매개변수 이름을 gsheets_connection 규격에 맞춤)
+    # 2. 연결 시도 (서비스 계정 정보 직접 주입)
     conn = st.connection(
         "gsheets", 
         type=GSheetsConnection, 
-        spreadsheet=spreadsheet_url, # 여기는 그대로 둡니다.
-        **{"service_account": service_account_info} # 딕셔너리 형태로 안전하게 전달
+        spreadsheet=spreadsheet_url,
+        **{"service_account": service_account_info} 
     )
 except Exception as e:
-    # 만약 위 방식도 에러가 나면, 가장 기본 방식으로 회귀
+    # 위 방식이 실패할 경우 마지막으로 기본 연결 시도
     try:
         conn = st.connection("gsheets", type=GSheetsConnection)
-    except:
-        st.error(f"연결 설정 오류: {e}")
+    except Exception as final_e:
+        st.error(f"구글 시트 연결에 최종 실패했습니다: {final_e}")
         st.stop()
 
 # --- 드롭다운 옵션 데이터 정의 ---
