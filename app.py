@@ -8,14 +8,23 @@ from datetime import datetime, timedelta
 # 페이지 기본 설정
 st.set_page_config(page_title="쌀 무역 인텔리전스", layout="wide")
 
-# --- 이 부분을 아래 코드로 교체하세요 ---
-if "connections" in st.secrets and "gsheets" in st.secrets.connections:
-    # Secrets에 설정된 정보를 명시적으로 전달하여 연결
-    conn = st.connection("gsheets", type=GSheetsConnection)
-else:
-    st.error("Streamlit Secrets 설정이 누락되었습니다. Settings > Secrets를 확인해주세요.")
-    # Secrets가 로드되지 않았을 때 어떤 값이 들어있는지 디버깅용으로 출력해볼 수 있습니다.
-    # st.write("현재 내 Secrets 키 목록:", st.secrets.keys()) 
+try:
+    # 1. Secrets에서 인증 정보 직접 가져오기
+    # Secrets 탭에 service_account라고 저장했는지, json_key라고 했는지 확인 후 맞춰주세요.
+    # 여기서는 가장 권장되는 'service_account' 기준입니다.
+    creds_dict = st.secrets["connections"]["gsheets"]["service_account"]
+    spreadsheet_url = st.secrets["connections"]["gsheets"]["spreadsheet"]
+    
+    # 2. 연결 객체 생성 시 인증 정보 직접 전달
+    conn = st.connection(
+        "gsheets", 
+        type=GSheetsConnection, 
+        spreadsheet=spreadsheet_url,
+        service_account=creds_dict  # 이 부분이 핵심: 키를 직접 찔러 넣어줌
+    )
+except Exception as e:
+    st.error(f"연결 설정 오류: {e}")
+    st.info("Streamlit Secrets에 service_account 설정이 올바른지 확인하세요.")
     st.stop()
 
 def load_data(worksheet_name):
