@@ -6,16 +6,34 @@ from streamlit_gsheets import GSheetsConnection
 from datetime import datetime, timedelta
 
 # 페이지 기본 설정
-st.set_page_config(page_title="쌀 무역 인텔리전스 (자동화 버전)", layout="wide")
+st.set_page_config(page_title="쌀 무역 인텔리전스", layout="wide")
 
-# --- 구글 시트 연결 ---
-conn = st.connection("gsheets", type=GSheetsConnection)
+# --- 구글 시트 연결 (최종 수정 버전) ---
+try:
+    # 1. Secrets에서 인증 정보와 시트 주소 가져오기
+    # .get()을 사용하여 데이터가 없을 경우를 대비합니다.
+    gsheets_config = st.secrets.get("connections", {}).get("gsheets", {})
+    spreadsheet_url = gsheets_config.get("spreadsheet")
+    service_account_info = gsheets_config.get("service_account")
 
-def load_data(worksheet_name):
+    if not spreadsheet_url or not service_account_info:
+        st.error("Secrets 설정(spreadsheet 또는 service_account)이 누락되었습니다.")
+        st.stop()
+
+    # 2. 연결 객체 생성 (매개변수 이름을 gsheets_connection 규격에 맞춤)
+    conn = st.connection(
+        "gsheets", 
+        type=GSheetsConnection, 
+        spreadsheet=spreadsheet_url, # 여기는 그대로 둡니다.
+        **{"service_account": service_account_info} # 딕셔너리 형태로 안전하게 전달
+    )
+except Exception as e:
+    # 만약 위 방식도 에러가 나면, 가장 기본 방식으로 회귀
     try:
-        return conn.read(worksheet=worksheet_name, ttl="0")
-    except Exception:
-        return pd.DataFrame()
+        conn = st.connection("gsheets", type=GSheetsConnection)
+    except:
+        st.error(f"연결 설정 오류: {e}")
+        st.stop()
 
 # --- 드롭다운 옵션 데이터 정의 ---
 TRADER_OPTIONS = ["지선", "민지", "현우", "기타"]
