@@ -34,6 +34,14 @@ except Exception as e:
         st.error(f"구글 시트 연결에 최종 실패했습니다: {final_e}")
         st.stop()
 
+def load_data(worksheet_name):
+    try:
+        # ttl="0"은 캐시를 쓰지 않고 실시간으로 구글 시트에서 가져오겠다는 뜻입니다.
+        return conn.read(worksheet=worksheet_name, ttl="0")
+    except Exception:
+        # 데이터가 아예 없는 초기 상태라면 빈 데이터프레임을 반환합니다.
+        return pd.DataFrame()
+        
 # --- 드롭다운 옵션 데이터 정의 ---
 TRADER_OPTIONS = ["지선", "민지", "현우", "기타"]
 SUPPLIER_OPTIONS = ["Olam", "Phoenix", "Wilmar", "Louis Dreyfus", "기타"] # 자주 쓰는 공급선 목록
